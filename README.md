@@ -37,3 +37,5 @@ All scripts for main experiments are saved below `exp/`
 6. `vis.py`, `vis_rawdata.py`, `vis_tcgan.py` are used to inspect the representation space.
 
 Other open source benchmarks are [TimeGAN](https://github.com/jsyoon0823/TimeGAN) and [CotGAN](https://github.com/tianlinxu312/cot-gan).
+
+`results.xlsx` reports some detailed experimental results.
