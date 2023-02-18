@@ -128,8 +128,7 @@ def split_random(x, ratio, y=None, seed=None):
         return x[ind_left], x[ind_right]
 
 
-def split_stratified(x, y, ratio, seed=None, with_y=False):
-    raise UserWarning("Please use train_test_split implemented in sklearn that has been widely tested.")
+def split_stratified(x, y, ratio, seed=None, with_y=True):
     x, y = shuffle_dataset([x, y], seed=seed)
     distr = distribute_dataset(x, y)
 
@@ -139,16 +138,6 @@ def split_stratified(x, y, ratio, seed=None, with_y=False):
     for key, x_batch in distr.items():
         n = x_batch.shape[0]
         i = int(np.floor(n * ratio))
-
-        # ----------------------
-        # Note: the previous implementation below is wrong. DCGAN performance has significant difference between the
-        # following implementation and the sklearn's train_test_split. After fixed, using the np.floor brings in stable
-        # results.
-        # ---------
-        # i = int(np.ceil(n * ratio))
-        # if i == x_batch.shape[0]:  # at least split one sample to X_right/y_right that usually is a test set.
-        #     i = i-1
-        # ----------------------
 
         x_left.append(x_batch[:i])
         y_left.extend([key]*i)
