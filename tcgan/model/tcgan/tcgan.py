@@ -226,9 +226,10 @@ class TCGAN(object):
             _res_df = pd.DataFrame.from_records(_res_list_np)
             res = _res_df.mean().to_dict()
             log_str = get_log_str(res, epoch, self.cfg.epochs)
-            log_str += f", time={(time() - t_start):.4}"
+            t = time() - t_start
+            log_str += f", time={t:.4}"
             self.cfg.logger.info(log_str)
-            res.update({'epoch': epoch})
+            res.update({'epoch': epoch, 'time': t})
             res_records.append(res)
 
             if (epoch + 1) % self.cfg.n_epochs_to_save_ckpt == 0 \
