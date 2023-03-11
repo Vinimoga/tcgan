@@ -3,7 +3,6 @@ from time import time
 import pandas as pd
 import numpy as np
 
-import tensorflow as tf
 from sklearn.metrics import f1_score
 
 from mlpy.datasets import ucr_uea
@@ -19,10 +18,7 @@ MODELS_FOR_RUN = {
 
 
 def run(ModelClass, fname_list, dir_data, dir_log, extend_dim=0, save_model=False, fit_kwargs=None):
-    if ModelClass in MODELS_REALIZED_BY_KERAS:
-        K = set_gpu_allow_growth_keras(tf)
-    else:
-        _, K = tf_keras_set_gpu_allow_growth()
+    _, K = tf_keras_set_gpu_allow_growth()
 
     fit_kwargs = fit_kwargs if fit_kwargs is not None else {}
 
