@@ -2,6 +2,7 @@ import os
 import fire
 
 from mlpy.configure import DIR_DATA_UCR15
+from mlpy.datasets.ucr_uea.data_names import UCR85_DATASETS
 
 from configure import DIR_LOG
 from tcgan.model.tcgan import TCGAN, TCGANConfig
