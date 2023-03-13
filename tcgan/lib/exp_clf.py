@@ -97,15 +97,21 @@ class ExpUnitClf(ExpUnitClfData):
         return feat_tr, feat_te
 
     def run(self):
+        t_start = time()
         feat_tr, feat_te = self.prepare_data()
+        t_encode = time() - t_start
 
         clfs = self.kwargs['classifiers']
         res = {}
+        res['time_encode'] = t_encode
         for name, clf in clfs.items():
             print(f"processing {name}")
+            t_start = time()
             _res = clf(feat_tr, self.y_tr, feat_te, self.y_te, self.n_classes)
+            t_clf = time() - t_start
             for k, v in _res.items():
                 res[f'{name}_{k}'] = v
+            res[f'time_{name}'] = t_clf
 
         out_file = self.kwargs['out_file']
         with open(os.path.join(self.model_cfg.eval_dir, out_file), 'a') as f:
