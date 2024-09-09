@@ -1,7 +1,8 @@
 fire==0.4.0
-tensorflow_probability==0.11.0
+#tensorflow_probability==0.11.0
 tensorflow_addons==0.11.2
 imageio==2.9.0
+#tensorflow-gpu==2.9.0
 Theano==1.0.5
 matplotlib==3.2.1
 numpy==1.18.3
