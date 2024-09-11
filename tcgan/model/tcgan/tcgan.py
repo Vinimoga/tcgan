@@ -19,6 +19,7 @@ class TCGAN(object):
         # build generator
         self.generator = self.build_generator()
         if self.cfg.verbose:
+            # print(self.cfg.x_shape)
             self.cfg.logger.info("Generator's summary: ")
             self.generator.summary(print_fn=self.cfg.logger.info)
         # build discriminator
