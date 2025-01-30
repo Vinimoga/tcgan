@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+from minerva.models.nets.tfc import IgnoreWhenBatch1
 
 class TCGAN_Discriminator(nn.Module):
     def __init__(
@@ -12,7 +13,8 @@ class TCGAN_Discriminator(nn.Module):
         kernel_size = 10, 
         strides = 2, 
         g_units_base = 32,
-        device = 'cpu' 
+        device = 'cpu',
+        batch_1_correction: bool = False
     ):
         """The TCGAN discriminator is designed to classify time series data using a 
         convolutional neural network (CNN) architecture. It takes a time series input 
@@ -54,15 +56,12 @@ class TCGAN_Discriminator(nn.Module):
         self.l3 = nn.Conv1d(
             self.units[1], self.units[2], self.kernel_size, stride=self.strides, padding=4, device=self.device
         )
-        self.l4 = nn.BatchNorm1d(
-            self.units[2], device=self.device
-        )
+        self.l4 = IgnoreWhenBatch1(nn.BatchNorm1d(self.units[2], device=self.device), active=batch_1_correction)
         self.l5 = nn.Conv1d(
             self.units[2], self.units[3], self.kernel_size, stride=self.strides, padding=4, device=self.device
         )
-        self.l6 = nn.BatchNorm1d(
-            self.units[3], device=self.device
-        )
+        self.l6 = IgnoreWhenBatch1(nn.BatchNorm1d(self.units[3], device=self.device), active=batch_1_correction)
+
         self.l7 = nn.Linear(
             self.layer_steps[0] * self.units[-1], 1, device=self.device
         )
@@ -115,12 +114,12 @@ class TCGAN_Discriminator(nn.Module):
             self.l2.bias.data.zero_()
             self.l3.weight = nn.init.trunc_normal_(self.l3.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
             self.l3.bias.data.zero_()
-            self.l4.weight = nn.init.trunc_normal_(self.l4.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
-            self.l4.bias.data.zero_()
+            self.l4.module.weight = nn.init.trunc_normal_(self.l4.module.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
+            self.l4.module.bias.data.zero_()
             self.l5.weight = nn.init.trunc_normal_(self.l5.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
             self.l5.bias.data.zero_()
-            self.l6.weight = nn.init.trunc_normal_(self.l6.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
-            self.l6.bias.data.zero_()
+            self.l6.module.weight = nn.init.trunc_normal_(self.l6.module.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
+            self.l6.module.bias.data.zero_()
             self.l7.weight = nn.init.trunc_normal_(self.l7.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
             self.l7.bias.data.zero_()
             '''for m in self.modules():
@@ -145,7 +144,8 @@ class TCGAN_Generator(nn.Module):
         kernel_size = 10, 
         strides = 2, 
         g_units_base = 32, 
-        device = 'cpu'
+        device = 'cpu',
+        batch_1_correction: bool = False
     ):
         super(TCGAN_Generator, self).__init__()
         self.input_shape = input_shape
@@ -161,27 +161,23 @@ class TCGAN_Generator(nn.Module):
         self.l1 = nn.Linear(
             noise_shape, self.layer_steps[0] * self.conv_units[0] * 2, device=self.device
         )
-        self.l2 = nn.BatchNorm1d(
-            self.layer_steps[0] * self.conv_units[0] * 2, device=self.device
-        )
+        self.l2 = IgnoreWhenBatch1(nn.BatchNorm1d(self.layer_steps[0] * self.conv_units[0] * 2, device=self.device), active=batch_1_correction)
+
         self.l3 = nn.ConvTranspose1d(
             self.conv_units[0] * 2, self.conv_units[0], self.kernel_size, stride=self.strides, padding=4, device=self.device
         )
-        self.l4 = nn.BatchNorm1d(
-            self.conv_units[0], device=device
-        )
+        self.l4 = IgnoreWhenBatch1(nn.BatchNorm1d(self.conv_units[0], device=device), active=batch_1_correction)
+
         self.l5 = nn.ConvTranspose1d(
             self.conv_units[0], self.conv_units[1], self.kernel_size, stride=self.strides, padding=4, device=self.device
         )
-        self.l6 = nn.BatchNorm1d(
-            self.conv_units[1], device=device
-        )
+        self.l6 = IgnoreWhenBatch1(nn.BatchNorm1d(self.conv_units[1], device=device), active=batch_1_correction)
+
         self.l7 = nn.ConvTranspose1d(
             self.conv_units[1], self.conv_units[2], self.kernel_size, stride=self.strides, padding=4, device=self.device
         )
-        self.l8 = nn.BatchNorm1d(
-            self.conv_units[2], device=self.device
-        )
+        self.l8 = IgnoreWhenBatch1(nn.BatchNorm1d(self.conv_units[2], device=self.device), active=batch_1_correction)
+        
         self.l9 = nn.ConvTranspose1d(
             self.conv_units[2], self.conv_units[3], self.kernel_size, stride=self.strides, padding=6, output_padding=0, device=self.device 
         )
@@ -233,20 +229,20 @@ class TCGAN_Generator(nn.Module):
     def initweights(self):
             self.l1.weight = nn.init.trunc_normal_(self.l1.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
             self.l1.bias.data.zero_()
-            self.l2.weight = nn.init.trunc_normal_(self.l2.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
-            self.l2.bias.data.zero_()
+            self.l2.module.weight = nn.init.trunc_normal_(self.l2.module.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
+            self.l2.module.bias.data.zero_()
             self.l3.weight = nn.init.trunc_normal_(self.l3.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
             self.l3.bias.data.zero_()
-            self.l4.weight = nn.init.trunc_normal_(self.l4.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
-            self.l4.bias.data.zero_()
+            self.l4.module.weight = nn.init.trunc_normal_(self.l4.module.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
+            self.l4.module.bias.data.zero_()
             self.l5.weight = nn.init.trunc_normal_(self.l5.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
             self.l5.bias.data.zero_()
-            self.l6.weight = nn.init.trunc_normal_(self.l6.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
-            self.l6.bias.data.zero_()
+            self.l6.module.weight = nn.init.trunc_normal_(self.l6.module.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
+            self.l6.module.bias.data.zero_()
             self.l7.weight = nn.init.trunc_normal_(self.l7.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
             self.l7.bias.data.zero_()
-            self.l8.weight = nn.init.trunc_normal_(self.l8.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
-            self.l8.bias.data.zero_()
+            self.l8.module.weight = nn.init.trunc_normal_(self.l8.module.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
+            self.l8.module.bias.data.zero_()
             self.l9.weight = nn.init.trunc_normal_(self.l9.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
             self.l9.bias.data.zero_()
 
@@ -260,7 +256,8 @@ class TCGAN_Encoder(nn.Module):
         kernel_size = 10, 
         strides = 2, 
         g_units_base = 32,
-        device = 'cpu' 
+        device = 'cpu',
+        batch_1_correction: bool = False
     ):
         """The TCGAN discriminator is designed to classify time series data using a 
         convolutional neural network (CNN) architecture. It takes a time series input 
@@ -290,6 +287,7 @@ class TCGAN_Encoder(nn.Module):
         self.strides = strides
         self.g_units_base = g_units_base
         self.device = device
+        
 
         self.calculate_constants()
 
@@ -302,15 +300,12 @@ class TCGAN_Encoder(nn.Module):
         self.l3 = nn.Conv1d(
             self.units[1], self.units[2], kernel_size, stride=strides, padding=4, device=device
         )
-        self.l4 = nn.BatchNorm1d(
-            self.units[2], device=device
-        )
+        self.l4 = IgnoreWhenBatch1(nn.BatchNorm1d(self.units[2], device=device), active = batch_1_correction)
+
         self.l5 = nn.Conv1d(
             self.units[2], self.units[3], kernel_size, stride=strides, padding=4, device=device
         )
-        self.l6 = nn.BatchNorm1d(
-            self.units[3], device=device
-        )
+        self.l6 = IgnoreWhenBatch1(nn.BatchNorm1d(self.units[3], device=device), active = batch_1_correction)
 
         self.initweights()
 
@@ -359,9 +354,9 @@ class TCGAN_Encoder(nn.Module):
             self.l2.bias.data.zero_()
             self.l3.weight = nn.init.trunc_normal_(self.l3.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
             self.l3.bias.data.zero_()
-            self.l4.weight = nn.init.trunc_normal_(self.l4.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
-            self.l4.bias.data.zero_()
+            self.l4.module.weight = nn.init.trunc_normal_(self.l4.module.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
+            self.l4.module.bias.data.zero_()
             self.l5.weight = nn.init.trunc_normal_(self.l5.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
             self.l5.bias.data.zero_()
-            self.l6.weight = nn.init.trunc_normal_(self.l6.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
-            self.l6.bias.data.zero_()
+            self.l6.module.weight = nn.init.trunc_normal_(self.l6.module.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
+            self.l6.module.bias.data.zero_()
