@@ -326,15 +326,15 @@ class TCGAN_Encoder(nn.Module):
     def calculate_constants(self):
         steps = self.input_shape[0]
         layer_steps = [steps]
-        for i in range(self.n_layers):
+        for i in range(self.n_layer):
             layer_steps.append(int(np.ceil(float(layer_steps[-1]) / float(self.strides))))
         layer_steps.reverse()
         self.layer_steps = layer_steps
 
         conv_units = []
-        if self.n_layers > 1:
+        if self.n_layer > 1:
             conv_units.append(self.g_units_base)
-            for _ in range(self.n_layers - 2):  # minus the first and the last layers
+            for _ in range(self.n_layer - 2):  # minus the first and the last layers
                 conv_units.append(conv_units[-1] * 2)
         conv_units.reverse()
         # the last layer must be aligned to the number of dimensions of input.
@@ -342,7 +342,7 @@ class TCGAN_Encoder(nn.Module):
         self.conv_units = conv_units
 
         units = [32]
-        for _ in range(self.n_layers - 1):  # exclude the first layer.
+        for _ in range(self.n_layer - 1):  # exclude the first layer.
             units.append(units[-1] * 2)
         self.units = units
 
