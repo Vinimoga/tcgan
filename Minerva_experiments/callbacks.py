@@ -2,17 +2,17 @@ import os
 import torch
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
+from lightning.pytorch.callbacks import Callback
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score
 
-from pytorch_lightning.callbacks import Callback
-
 class TSNECallback(Callback):
     def __init__(self, image_save_dir, latent_dim=100):
+        super().__init__()
         self.image_save_dir = image_save_dir
         self.latent_dim = latent_dim
 
-    def on_validation_end(self, trainer, pl_module):
+    def on_train_epoch_end(self, trainer, pl_module):
         self._generate_and_save_tsne_plot(pl_module, trainer)
 
     def _generate_and_save_tsne_plot(self, pl_module, trainer):
@@ -38,6 +38,7 @@ class TSNECallback(Callback):
 
 class KNNValidationCallback(Callback):
     def __init__(self, k=5):
+        super().__init__()
         self.knn = KNeighborsClassifier(n_neighbors=k)
 
     def on_validation_epoch_end(self, trainer, pl_module):
@@ -47,8 +48,8 @@ class KNNValidationCallback(Callback):
 
     def knn_validation(self, pl_module, batch):
         x, y = batch
-        pl_module.extract_and_load_encoder_from_discriminator()
-        features = pl_module.encoder(x)
+        encoder = pl_module.dis.backbone()
+        features = encoder(x)
 
         self.knn.fit(features.cpu().detach().numpy(), y.cpu().numpy())
         predictions = self.knn.predict(features.cpu().detach().numpy())
@@ -56,3 +57,14 @@ class KNNValidationCallback(Callback):
 
         pl_module.log("knn_accuracy", accuracy)
         print(f'KNN Validation Accuracy: {accuracy * 100:.2f}%')
+
+class MyPrintingCallback(Callback):
+    #Test callback just to do a start/end test for our training
+    def __init__(self):
+        super().__init__()
+
+    def on_train_start(self, trainer, pl_module):
+        print("Training is starting")
+
+    def on_train_end(self, trainer, pl_module):
+        print("Training is ending")
