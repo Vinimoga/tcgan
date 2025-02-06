@@ -67,6 +67,19 @@ class TCGAN_Discriminator(nn.Module):
         )
 
         self.initweights()
+        
+        self.backbone = nn.Sequential(self.l1,
+                                      nn.LeakyReLU(0.2),
+                                      self.l2,
+                                      nn.LeakyReLU(0.2),
+                                      self.l3,
+                                      self.l4,
+                                      nn.LeakyReLU(0.2),
+                                      self.l5, 
+                                      self.l6,
+                                      TransposeLayer(1,2), # Custom module for transpose like F.transpose
+                                      nn.Flatten(start_dim=1)
+                                      )
 
     def forward(self, x):
         x = self.l1(x)
@@ -122,17 +135,15 @@ class TCGAN_Discriminator(nn.Module):
             self.l6.module.bias.data.zero_()
             self.l7.weight = nn.init.trunc_normal_(self.l7.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
             self.l7.bias.data.zero_()
-            '''for m in self.modules():
-                if isinstance(m, nn.Conv1d):
-                    m.weight= nn.init.trunc_normal_(m.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
-                    m.bias.data.zero_()
-                elif isinstance(m, nn.Linear):
-                    m.weight= nn.init.trunc_normal_(m.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
-                    m.bias.data.zero_()
-                elif isinstance(m, nn.BatchNorm1d):
-                    m.weight= nn.init.trunc_normal_(m.weight, mean=0.0, std=0.02, a=-0.04, b=0.04)
-                    m.bias.data.zero_()
-            '''
+
+class TransposeLayer(nn.Module):
+    def __init__(self, dim0, dim1):
+        super(TransposeLayer, self).__init__()
+        self.dim0 = dim0
+        self.dim1 = dim1
+
+    def forward(self, x):
+        return x.transpose(self.dim0, self.dim1)
 
 
 class TCGAN_Generator(nn.Module):
@@ -181,7 +192,7 @@ class TCGAN_Generator(nn.Module):
         self.l9 = nn.ConvTranspose1d(
             self.conv_units[2], self.conv_units[3], self.kernel_size, stride=self.strides, padding=6, output_padding=0, device=self.device 
         )
-        
+
         self.initweights()
 
     def forward(self, x):
