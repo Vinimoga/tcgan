@@ -32,13 +32,13 @@ class TsneGeneratorCallback(Callback):
             tsne_image_path = os.path.join(self.image_save_dir, f'tsne_epoch_{trainer.current_epoch}.png')
             plt.savefig(tsne_image_path)
             plt.close()
-
 class TsneEncoderCallback(Callback):
-    def __init__(self, image_save_dir, random_state = 42, points = 1000):
+    def __init__(self, image_save_dir, random_state=42, points=1000):
         super().__init__()
         self.image_save_dir = image_save_dir
         self.random_state = random_state
         self.points = points
+        self.SAC = ['Sit', 'Stand', 'Walk', 'Upstairs', 'Downstairs', 'Run']
         if not os.path.exists(self.image_save_dir):
             os.makedirs(self.image_save_dir)
 
@@ -70,11 +70,15 @@ class TsneEncoderCallback(Callback):
 
             # Plot results
             plt.figure(figsize=(8, 6))
-            plt.scatter(transformed[:, 0], transformed[:, 1], c=all_labels, cmap="viridis", alpha=0.7)
+            scatter = plt.scatter(transformed[:, 0], transformed[:, 1], c=all_labels, cmap="viridis", alpha=0.7)
             plt.xlabel("t-SNE Component 1")
             plt.ylabel("t-SNE Component 2")
-            plt.colorbar(label="Class Labels")
             plt.title(f't-SNE of Generated Images - Epoch {trainer.current_epoch}')
+
+            # Create a legend with the SAC labels
+            handles, _ = scatter.legend_elements()
+            legend_labels = {i: label for i, label in enumerate(self.SAC)}
+            plt.legend(handles, [legend_labels[int(handle.get_color()[0])] for handle in handles], title="Class Labels")
 
             # Save image
             tsne_image_path = os.path.join(self.image_save_dir, f'tsne_epoch_{trainer.current_epoch}.png')
@@ -96,6 +100,7 @@ class KNNValidationCallback(Callback):
 
     def knn_validation(self, pl_module, batch):
         x, y = batch
+        x, y = x.to(pl_module.device), y.to(pl_module.device)
         features = pl_module.dis.backbone(x)
 
         self.knn.fit(features.cpu().detach().numpy(), y.cpu().numpy())
