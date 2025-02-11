@@ -106,3 +106,7 @@ ENV/
 # mkdocs documentation
 /site
 
+/Minerva_experiments/Images
+/Minerva_experiments/encoder_visualization/checkpoints
+/Minerva_experiments/encoder_visualization/logs
+
