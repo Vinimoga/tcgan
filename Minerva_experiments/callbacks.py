@@ -1,11 +1,15 @@
 import os
 import torch
 import matplotlib.pyplot as plt
+from matplotlib import cm
+import matplotlib.patches as mpatches
 import numpy as np
 from sklearn.manifold import TSNE
 from lightning.pytorch.callbacks import Callback
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score
+from PIL import Image
+import re
 
 class TsneGeneratorCallback(Callback):
     def __init__(self, image_save_dir, latent_dim=100):
@@ -32,6 +36,12 @@ class TsneGeneratorCallback(Callback):
             tsne_image_path = os.path.join(self.image_save_dir, f'tsne_epoch_{trainer.current_epoch}.png')
             plt.savefig(tsne_image_path)
             plt.close()
+
+    def on_train_end(self, trainer, pl_module):
+        image_files = sorted(os.listdir(self.image_save_dir), key=numerical_sort)
+        image_paths = [os.path.join(self.image_save_dir, file_name) for file_name in image_files if file_name.endswith('.png')]
+
+        create_gif(image_paths, self.image_save_dir, duration=200)
 class TsneEncoderCallback(Callback):
     def __init__(self, image_save_dir, random_state=42, points=1000):
         super().__init__()
@@ -68,6 +78,9 @@ class TsneEncoderCallback(Callback):
             tsne = TSNE(n_components=2, random_state=self.random_state)
             transformed = tsne.fit_transform(features)
 
+            cmap = cm.get_cmap("viridis", len(self.SAC))
+            norm = plt.Normalize(vmin=min(all_labels), vmax=max(all_labels))
+
             # Plot results
             plt.figure(figsize=(8, 6))
             scatter = plt.scatter(transformed[:, 0], transformed[:, 1], c=all_labels, cmap="viridis", alpha=0.7)
@@ -75,16 +88,39 @@ class TsneEncoderCallback(Callback):
             plt.ylabel("t-SNE Component 2")
             plt.title(f't-SNE of Generated Images - Epoch {trainer.current_epoch}')
 
-            # Create a legend with the SAC labels
-            handles, _ = scatter.legend_elements()
-            legend_labels = {i: label for i, label in enumerate(self.SAC)}
-            plt.legend(handles, [legend_labels[int(handle.get_color()[0])] for handle in handles], title="Class Labels")
+            handles = [mpatches.Patch(color=cmap(norm(i)), label=label) for i, label in enumerate(self.SAC)]
+
+            plt.legend(handles=handles, title="Class Labels", loc='lower right')
 
             # Save image
             tsne_image_path = os.path.join(self.image_save_dir, f'tsne_epoch_{trainer.current_epoch}.png')
             plt.savefig(tsne_image_path)
             plt.close()
 
+    def on_train_end(self, trainer, pl_module):
+        image_files = sorted(os.listdir(self.image_save_dir), key=numerical_sort)
+        image_paths = [os.path.join(self.image_save_dir, file_name) for file_name in image_files if file_name.endswith('.png')]
+
+        create_gif(image_paths, self.image_save_dir, duration=200)
+
+        
+def numerical_sort(value):
+    """
+    Custom sort function to sort filenames with numerical values correctly.
+    """
+    numbers = re.findall(r'\d+', value)
+    return int(numbers[0]) if numbers else 0
+
+def create_gif(image_paths, output_gif_path, duration=500):
+    images = [Image.open(image_path) for image_path in image_paths]
+    # Save as GIF
+    images[0].save(
+        f'{output_gif_path}/tsne.gif',
+        save_all=True,
+        append_images=images[1:],            
+        duration=duration,
+        loop=0  # 0 means infinite loop
+    )    
 class KNNValidationCallback(Callback):
     def __init__(self, k=10):
         super().__init__()
